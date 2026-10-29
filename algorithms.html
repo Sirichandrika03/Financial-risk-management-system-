@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+
+{% block title %}DSA Algorithms Sandbox | Financial Risk Management{% endblock %}
+{% block page_heading %}Data Structures & Algorithms Sandbox{% endblock %}
+
+{% block content %}
+<!-- DSA Context Alert -->
+<div class="alert alert-info" style="display: block;">
+  <div style="font-weight: 700; margin-bottom: 0.25rem;">Manual DSA Implementations for Financial Data Processing</div>
+  <div style="font-size: 0.85rem;">
+    This interactive sandbox runs manual Python algorithm implementations (located in <code>algorithms/</code>) without calling Python's built-in <code>sorted()</code>, <code>list.sort()</code>, or index-based built-in searches.
+    Actual measured execution time (in milliseconds & microseconds) is recorded via <code>time.perf_counter()</code> and benchmarked alongside theoretical big-O complexity.
+  </div>
+</div>
+
+<!-- Algorithm Selection Cards -->
+<div class="algo-header-grid">
+  <div class="algo-tab-btn active" data-algo="merge_sort" onclick="switchAlgoTab('merge_sort')">
+    <h4>1. Merge Sort</h4>
+    <span>Sort by Amount [O(n log n)]</span>
+  </div>
+
+  <div class="algo-tab-btn" data-algo="quick_sort" onclick="switchAlgoTab('quick_sort')">
+    <h4>2. Quick Sort</h4>
+    <span>Sort by Risk Score [O(n log n)]</span>
+  </div>
+
+  <div class="algo-tab-btn" data-algo="binary_search" onclick="switchAlgoTab('binary_search')">
+    <h4>3. Binary Search</h4>
+    <span>Lookup by TX ID [O(log n)]</span>
+  </div>
+
+  <div class="algo-tab-btn" data-algo="linear_search" onclick="switchAlgoTab('linear_search')">
+    <h4>4. Linear Search</h4>
+    <span>Keyword Query [O(n)]</span>
+  </div>
+
+  <div class="algo-tab-btn" data-algo="hashing" onclick="switchAlgoTab('hashing')">
+    <h4>5. Hashing & Duplicates</h4>
+    <span>Hash Table Lookup [O(1)]</span>
+  </div>
+</div>
+
+<!-- Active Algorithm Control & Configuration Panel -->
+<div class="algo-execution-panel">
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
+    <div>
+      <h3 id="algoTitle" style="font-size: 1.15rem; color: var(--text-main); font-weight: 700;">Merge Sort Algorithm</h3>
+      <p id="algoDescription" style="font-size: 0.85rem; color: var(--text-secondary); max-width: 800px; margin-top: 0.35rem;">
+        Divide-and-Conquer sorting algorithm. Recursively splits transaction array into halves and merges them in sorted order based on transaction amount. Stable and guaranteed O(n log n).
+      </p>
+    </div>
+
+    <button class="btn btn-primary" onclick="executeCurrentAlgorithm()" id="btnExecuteAlgo" style="padding: 0.7rem 1.4rem; font-weight: 600;">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <polygon points="5 3 19 12 5 21 5 3"/>
+      </svg>
+      <span>Execute Algorithm</span>
+    </button>
+  </div>
+
+  <!-- Dynamic Control Form Options -->
+  <div id="dynamicControls" style="background-color: #f8fafc; padding: 1.25rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+    <!-- Sort Controls (Merge Sort & Quick Sort) -->
+    <div id="sortControls" style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+      <label style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary);">Sort Ordering:</label>
+      <select id="sortOrderSelect" class="form-control" style="width: auto;">
+        <option value="asc">Ascending Order (Lowest &rarr; Highest)</option>
+        <option value="desc">Descending Order (Highest &rarr; Lowest)</option>
+      </select>
+    </div>
+
+    <!-- Binary Search Controls -->
+    <div id="binarySearchControls" style="display: none; gap: 1rem; align-items: center; flex-wrap: wrap;">
+      <label style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary);">Target Transaction ID:</label>
+      <input type="number" id="binarySearchTarget" class="form-control" style="width: 220px;" placeholder="e.g. 104" value="103">
+      <span style="font-size: 0.75rem; color: var(--text-muted);">(Dataset is pre-sorted by transaction_id before execution)</span>
+    </div>
+
+    <!-- Linear Search Controls -->
+    <div id="linearSearchControls" style="display: none; gap: 1rem; align-items: center; flex-wrap: wrap;">
+      <label style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary);">Search Keyword:</label>
+      <input type="text" id="linearSearchKeyword" class="form-control" style="width: 240px;" placeholder="e.g. Wire, Transfer, Vendor" value="Wire">
+
+      <label style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary);">Target Attribute:</label>
+      <select id="linearSearchField" class="form-control" style="width: auto;">
+        <option value="description">Description field</option>
+        <option value="transaction_type">Transaction Type</option>
+        <option value="transaction_status">Status</option>
+        <option value="all">All Attributes</option>
+      </select>
+    </div>
+
+    <!-- Hashing Controls -->
+    <div id="hashingControls" style="display: none; gap: 1rem; align-items: center; flex-wrap: wrap;">
+      <label style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary);">Hashing Operation:</label>
+      <select id="hashingActionSelect" class="form-control" style="width: auto;" onchange="toggleHashingInput(this.value)">
+        <option value="duplicates">Detect Duplicate Transaction IDs in Batch [O(n)]</option>
+        <option value="lookup">Instant O(1) Hash Table Lookup by ID</option>
+      </select>
+
+      <div id="hashingLookupBox" style="display: none; align-items: center; gap: 0.5rem;">
+        <label style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary);">Target TX ID:</label>
+        <input type="number" id="hashingLookupId" class="form-control" style="width: 140px;" placeholder="102" value="102">
+      </div>
+    </div>
+  </div>
+
+  <!-- Real-Time Measured Benchmark Dashboard -->
+  <div class="benchmark-stats">
+    <div class="bench-stat-box">
+      <span>Theoretical Time Complexity</span>
+      <strong id="algoTheoryComplexity" style="color: var(--primary);">O(n log n)</strong>
+    </div>
+
+    <div class="bench-stat-box">
+      <span>Auxiliary Space Complexity</span>
+      <strong id="algoSpaceComplexity">O(n)</strong>
+    </div>
+
+    <div class="bench-stat-box">
+      <span>Measured Execution Time</span>
+      <strong id="measuredExecutionTime" style="color: #059669;">Ready to execute</strong>
+    </div>
+
+    <div class="bench-stat-box">
+      <span>Records Processed (n)</span>
+      <strong id="recordsProcessedCount">-</strong>
+    </div>
+
+    <div class="bench-stat-box">
+      <span>Comparisons / Steps</span>
+      <strong id="comparisonsCount">-</strong>
+    </div>
+  </div>
+</div>
+
+<!-- Algorithm Results Output Card -->
+<div class="content-card" id="algoResultSection" style="display: none;">
+  <div class="card-header-actions">
+    <div>
+      <h3>Execution Results & Processed Dataset</h3>
+      <div id="algoStatusMessage" style="font-size: 0.85rem; color: #047857; margin-top: 0.25rem; font-weight: 500;"></div>
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="data-table" id="algoResultTable">
+      <thead>
+        <tr>
+          <th>TX ID</th>
+          <th>Account Holder</th>
+          <th>Type</th>
+          <th>Amount ($)</th>
+          <th>Description</th>
+          <th>Risk Score</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="algoResultTbody">
+        <!-- Filled dynamically by JavaScript on execution -->
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function toggleHashingInput(val) {
+  const box = document.getElementById('hashingLookupBox');
+  if (box) {
+    box.style.display = (val === 'lookup') ? 'flex' : 'none';
+  }
+}
+</script>
+{% endblock %}

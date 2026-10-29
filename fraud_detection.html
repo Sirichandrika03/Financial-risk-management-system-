@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+
+{% block title %}Fraud Detection & Incident Management{% endblock %}
+{% block page_heading %}Fraud Detection & Incident Auditing{% endblock %}
+
+{% block content %}
+<!-- Ethical / Objective Disclaimer -->
+<div class="alert alert-info">
+  <div>
+    <strong>Compliance Advisory:</strong> Flagged incidents represent anomalous transaction behaviors requiring human verification. An account holder is never presumed culpable, and transactions above the threshold are treated as review candidates rather than automatic fraud.
+  </div>
+</div>
+
+<!-- Incident Summary Stats -->
+<div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 1.5rem;">
+  <div class="stat-card">
+    <div class="stat-icon red">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+    </div>
+    <div class="stat-details">
+      <h3>Total Incidents</h3>
+      <div class="stat-value">{{ fraud_incidents|length }}</div>
+      <div class="stat-sub">Logged in database</div>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon amber">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M12 8v4l3 3"/>
+        <circle cx="12" cy="12" r="9"/>
+      </svg>
+    </div>
+    <div class="stat-details">
+      <h3>Under Review</h3>
+      <div class="stat-value" style="color: var(--warning);">
+        {{ fraud_incidents|selectattr('incident_status', 'in', ['Open', 'Under Investigation'])|list|length }}
+      </div>
+      <div class="stat-sub">Active investigator queues</div>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon green">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <polyline points="20 6 9 17 4 12"/>
+      </svg>
+    </div>
+    <div class="stat-details">
+      <h3>Resolved / Closed</h3>
+      <div class="stat-value" style="color: var(--success);">
+        {{ fraud_incidents|selectattr('incident_status', 'in', ['Resolved', 'False Positive'])|list|length }}
+      </div>
+      <div class="stat-sub">Audited & mitigated</div>
+    </div>
+  </div>
+</div>
+
+<!-- Main Fraud Incidents Table -->
+<div class="content-card">
+  <div class="card-header-actions">
+    <div>
+      <h3>Reported Fraud Incidents (TABLE: Fraud_Incidents)</h3>
+      <span style="font-size: 0.75rem; color: var(--text-muted);">Joined with Transactions, Risk Assessments, and Accounts via SQL relational queries</span>
+    </div>
+
+    <div class="header-controls">
+      <!-- Search Input -->
+      <div class="search-input-group">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" placeholder="Search fraud type, status..." data-table-search="fraudIncidentsTable" id="fraudSearchInput">
+      </div>
+
+      <!-- Status Filter -->
+      <select class="filter-select" data-table-filter="fraudIncidentsTable" data-filter-col="4">
+        <option value="all">All Incident Statuses</option>
+        <option value="Open">Open</option>
+        <option value="Under Investigation">Under Investigation</option>
+        <option value="Resolved">Resolved</option>
+        <option value="False Positive">False Positive</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="data-table" id="fraudIncidentsTable">
+      <thead>
+        <tr>
+          <th>Incident ID</th>
+          <th>TX ID & Account</th>
+          <th>Fraud Type</th>
+          <th>Audit Description</th>
+          <th>Status</th>
+          <th>Reported Date</th>
+          <th style="text-align: right;">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for inc in fraud_incidents %}
+        <tr>
+          <td><strong>#INC-{{ inc.incident_id }}</strong></td>
+          <td>
+            <div style="font-weight: 600;">#TX-{{ inc.transaction_id }}</div>
+            <span style="font-size: 0.75rem; color: var(--text-muted);">{{ inc.account_holder }}</span>
+          </td>
+          <td>
+            <span class="badge badge-high">{{ inc.fraud_type }}</span>
+          </td>
+          <td style="max-width: 300px; font-size: 0.82rem; color: var(--text-secondary);">
+            {{ inc.incident_description }}
+          </td>
+          <td>
+            {% if inc.incident_status == 'Open' %}
+              <span class="badge badge-pending">Open</span>
+            {% elif inc.incident_status == 'Under Investigation' %}
+              <span class="badge badge-medium">Under Investigation</span>
+            {% elif inc.incident_status == 'Resolved' %}
+              <span class="badge badge-completed">Resolved</span>
+            {% else %}
+              <span class="badge badge-low">False Positive</span>
+            {% endif %}
+          </td>
+          <td style="font-size: 0.8rem; color: var(--text-muted); white-space: nowrap;">
+            {{ inc.reported_date }}
+          </td>
+          <td style="text-align: right; white-space: nowrap;">
+            <button class="btn btn-outline btn-sm" onclick="populateIncidentEdit('{{ inc.incident_id }}', '{{ inc.incident_status }}', '{{ inc.incident_description|replace('\'', '\\\'') }}')">
+              Update Status
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal: Update Incident Status -->
+<div class="modal-backdrop" id="editIncidentModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3>Update Fraud Incident Status</h3>
+      <button class="modal-close-btn" onclick="closeModal('editIncidentModal')">&times;</button>
+    </div>
+    <form action="{{ url_for('update_fraud_incident') }}" method="POST">
+      <input type="hidden" name="incident_id" id="edit_incident_id">
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="edit_incident_status">Investigation Status *</label>
+          <select name="incident_status" id="edit_incident_status" class="form-control" required>
+            <option value="Open">Open (Pending Triage)</option>
+            <option value="Under Investigation">Under Investigation (Active)</option>
+            <option value="Resolved">Resolved (Confirmed & Mitigated)</option>
+            <option value="False Positive">False Positive (Customer Cleared)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="edit_incident_description">Audit Findings & Notes *</label>
+          <textarea name="incident_description" id="edit_incident_description" class="form-control" rows="4" required></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="closeModal('editIncidentModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Update Incident Record</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

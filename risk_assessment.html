@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+
+{% block title %}Risk Assessment | Financial Risk Management{% endblock %}
+{% block page_heading %}Explainable Risk Assessment{% endblock %}
+
+{% block content %}
+<!-- Educational Notice Banner -->
+<div class="alert alert-warning" style="display: block;">
+  <div style="font-weight: 700; margin-bottom: 0.25rem;">Rule-Based Compliance Evaluation (TABLE: Risk_Assessments)</div>
+  <div style="font-size: 0.85rem;">
+    Our risk engine evaluates transactions against transparent rules: (1) High-value threshold &gt; ₹5,000, (2) Velocity / rapid frequency spikes, (3) Anomaly vs account balance history, and (4) Failed transaction statuses.
+    <strong>Important:</strong> A high-risk score is an alert triggering compliance audit, not definitive proof of fraud or user guilt.
+  </div>
+</div>
+
+<!-- Risk Category Metrics -->
+<div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-bottom: 1.5rem;">
+  <div class="stat-card">
+    <div class="stat-icon green">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+        <polyline points="22 4 12 14.01 9 11.01"/>
+      </svg>
+    </div>
+    <div class="stat-details">
+      <h3 style="color: #047857;">Low Risk (0 - 29)</h3>
+      <div class="stat-value" style="color: #059669;">
+        {{ risk_assessments|selectattr('risk_level', 'equalto', 'Low')|list|length }} txns
+      </div>
+      <div class="stat-sub">Normal behavioral baseline</div>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon amber">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+    </div>
+    <div class="stat-details">
+      <h3 style="color: #b45309;">Medium Risk (30 - 69)</h3>
+      <div class="stat-value" style="color: #d97706;">
+        {{ risk_assessments|selectattr('risk_level', 'equalto', 'Medium')|list|length }} txns
+      </div>
+      <div class="stat-sub">Elevated amount / velocity</div>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon red">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/>
+        <line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+    </div>
+    <div class="stat-details">
+      <h3 style="color: #b91c1c;">High Risk (70 - 100)</h3>
+      <div class="stat-value" style="color: #dc2626;">
+        {{ risk_assessments|selectattr('risk_level', 'equalto', 'High')|list|length }} txns
+      </div>
+      <div class="stat-sub">Requires manual compliance audit</div>
+    </div>
+  </div>
+</div>
+
+<!-- Main Risk Assessments Table -->
+<div class="content-card">
+  <div class="card-header-actions">
+    <div>
+      <h3>Evaluated Risk Assessments (TABLE: Risk_Assessments)</h3>
+      <span style="font-size: 0.75rem; color: var(--text-muted);">Joined with Transactions and Accounts data via SQL Foreign Keys</span>
+    </div>
+
+    <div class="header-controls">
+      <!-- Search Input -->
+      <div class="search-input-group">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" placeholder="Search reason, account..." data-table-search="riskTable" id="riskSearchInput">
+      </div>
+
+      <!-- Risk Level Filter -->
+      <select class="filter-select" data-table-filter="riskTable" data-filter-col="5">
+        <option value="all">All Risk Tiers</option>
+        <option value="Low">Low Risk</option>
+        <option value="Medium">Medium Risk</option>
+        <option value="High">High Risk</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="data-table" id="riskTable">
+      <thead>
+        <tr>
+          <th>Risk ID</th>
+          <th>TX ID & Date</th>
+          <th>Account Holder</th>
+          <th>Amount</th>
+          <th>Risk Score Meter</th>
+          <th>Risk Level</th>
+          <th>Explainable Rule Reason</th>
+          <th style="text-align: right;">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for risk in risk_assessments %}
+        <tr>
+          <td><strong>#RSK-{{ risk.risk_id }}</strong></td>
+          <td>
+            <div style="font-weight: 600;">#TX-{{ risk.transaction_id }}</div>
+            <span style="font-size: 0.72rem; color: var(--text-muted);">{{ risk.assessment_date }}</span>
+          </td>
+          <td>{{ risk.account_holder }}</td>
+          <td><strong>{{ risk.amount|format_inr }}</strong></td>
+          <td>
+            <div class="risk-meter">
+              <div class="meter-track">
+                <div class="meter-fill {% if risk.risk_score >= 70 %}high{% elif risk.risk_score >= 30 %}medium{% else %}low{% endif %}" style="width: {{ risk.risk_score }}%;"></div>
+              </div>
+              <span style="font-size: 0.8rem; font-weight: 700;">{{ risk.risk_score }}/100</span>
+            </div>
+          </td>
+          <td>
+            {% if risk.risk_level == 'High' %}
+              <span class="badge badge-high">High Risk</span>
+            {% elif risk.risk_level == 'Medium' %}
+              <span class="badge badge-medium">Medium Risk</span>
+            {% else %}
+              <span class="badge badge-low">Low Risk</span>
+            {% endif %}
+          </td>
+          <td style="max-width: 320px; font-size: 0.82rem; color: var(--text-secondary);">
+            {{ risk.risk_reason }}
+          </td>
+          <td style="text-align: right;">
+            {% if risk.risk_level == 'High' %}
+              <button class="btn btn-danger-outline btn-sm" onclick="openEscalateModal('{{ risk.transaction_id }}', '{{ risk.risk_reason|replace('\'', '\\\'') }}')">
+                Review & Escalate
+              </button>
+            {% else %}
+              <span style="font-size: 0.75rem; color: var(--text-muted);">Within Policy</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal: Escalate to Fraud Incident -->
+<div class="modal-backdrop" id="escalateModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3>Escalate Transaction to Fraud Review</h3>
+      <button class="modal-close-btn" onclick="closeModal('escalateModal')">&times;</button>
+    </div>
+    <form action="{{ url_for('add_fraud_incident') }}" method="POST">
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="esc_tx_id">Flagged Transaction ID *</label>
+          <input type="text" name="transaction_id" id="esc_tx_id" class="form-control" readonly>
+        </div>
+
+        <div class="form-group">
+          <label for="esc_fraud_type">Suspected Category *</label>
+          <select name="fraud_type" id="esc_fraud_type" class="form-control" required>
+            <option value="Unusual High Value Spike">Unusual High Value Spike</option>
+            <option value="Rapid Transaction Velocity">Rapid Transaction Velocity</option>
+            <option value="Repeated Transaction Failures">Repeated Transaction Failures</option>
+            <option value="Balance Drain Anomaly">Balance Drain Anomaly</option>
+            <option value="Structuring Suspicion">Structuring Suspicion</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="esc_incident_description">Incident Audit Description *</label>
+          <textarea name="incident_description" id="esc_incident_description" class="form-control" rows="3" required></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="closeModal('escalateModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary" style="background-color: var(--danger);">Open Fraud Incident</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function openEscalateModal(txId, reason) {
+  document.getElementById('esc_tx_id').value = txId;
+  document.getElementById('esc_incident_description').value = `Compliance review flagged: ${reason}`;
+  openModal('escalateModal');
+}
+</script>
+{% endblock %}

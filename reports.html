@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+
+{% block title %}Financial & Risk Reports | Financial Risk Management{% endblock %}
+{% block page_heading %}Financial & Compliance Reports{% endblock %}
+
+{% block content %}
+<!-- Report Summary Banner -->
+<div class="alert alert-info" style="display: flex; justify-content: space-between; align-items: center;">
+  <div>
+    <strong>SQL Aggregate Reporting:</strong> Aggregates transactions with <code>GROUP BY</code> and <code>SUM()</code>, preventing row-inflation bugs across <code>LEFT JOIN</code> risk assessments and incidents.
+  </div>
+  <button class="btn btn-outline btn-sm" onclick="window.print()">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width: 14px; height: 14px;">
+      <polyline points="6 9 6 2 18 2 18 9"/>
+      <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+      <rect x="6" y="14" width="12" height="8"/>
+    </svg>
+    <span>Print / Export PDF</span>
+  </button>
+</div>
+
+<!-- Financial Flow Summary Cards -->
+<div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-bottom: 2rem;">
+  <div class="stat-card">
+    <div class="stat-icon green">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <line x1="12" y1="19" x2="12" y2="5"/>
+        <polyline points="5 12 12 5 19 12"/>
+      </svg>
+    </div>
+    <div class="stat-details">
+      <h3>Cumulative Inflow</h3>
+      <div class="stat-value" style="color: #059669;">{{ report_summary.total_income|format_inr }}</div>
+      <div class="stat-sub">From {{ report_summary.income_tx_count }} Income entries</div>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon red">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <line x1="12" y1="5" x2="12" y2="19"/>
+        <polyline points="19 12 12 19 5 12"/>
+      </svg>
+    </div>
+    <div class="stat-details">
+      <h3>Cumulative Outflow</h3>
+      <div class="stat-value" style="color: #dc2626;">{{ report_summary.total_expenses|format_inr }}</div>
+      <div class="stat-sub">From {{ report_summary.expense_tx_count }} Expense entries</div>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon blue">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+      </svg>
+    </div>
+    <div class="stat-details">
+      <h3>Net Cash Position</h3>
+      <div class="stat-value" style="color: #1d4ed8;">{{ report_summary.net_balance|format_inr }}</div>
+      <div class="stat-sub">System balance liquidity</div>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon amber">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10"/>
+        <polyline points="12 6 12 12 16 14"/>
+      </svg>
+    </div>
+    <div class="stat-details">
+      <h3>High Risk Ratio</h3>
+      <div class="stat-value" style="color: #d97706;">{{ report_summary.high_risk_percentage }}%</div>
+      <div class="stat-sub">Of total transactions</div>
+    </div>
+  </div>
+</div>
+
+<!-- Charts Split Layout -->
+<div class="dashboard-row">
+  <div class="chart-card">
+    <div class="chart-header">
+      <div>
+        <h3>Volume by Account Portfolio</h3>
+        <span style="font-size: 0.75rem; color: var(--text-muted);">SQL Aggregate: GROUP BY account_holder</span>
+      </div>
+    </div>
+    <div class="chart-canvas-wrapper">
+      <canvas id="accountsReportChart"></canvas>
+    </div>
+  </div>
+
+  <div class="chart-card">
+    <div class="chart-header">
+      <div>
+        <h3>Fraud Incident Resolution</h3>
+        <span style="font-size: 0.75rem; color: var(--text-muted);">Status tracking distribution</span>
+      </div>
+    </div>
+    <div class="chart-canvas-wrapper">
+      <canvas id="incidentReportChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Account Aggregates Breakdown Table -->
+<div class="content-card">
+  <div class="card-header-actions">
+    <div>
+      <h3>Portfolio Level Aggregate Summary (GROUP BY account_id)</h3>
+      <span style="font-size: 0.75rem; color: var(--text-muted);">Calculated directly via SQL Aggregates without inflated joins</span>
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Account ID</th>
+          <th>Account Holder</th>
+          <th>Type</th>
+          <th>Current Balance</th>
+          <th>Total Transactions</th>
+          <th>Total Income</th>
+          <th>Total Expense</th>
+          <th>Avg Transaction Size</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for acc in account_reports %}
+        <tr>
+          <td><strong>#ACC-{{ acc.account_id }}</strong></td>
+          <td><strong style="color: #0f172a;">{{ acc.account_holder }}</strong></td>
+          <td><span class="badge badge-type-income">{{ acc.account_type }}</span></td>
+          <td><strong>{{ acc.balance|format_inr }}</strong></td>
+          <td>{{ acc.tx_count }} entries</td>
+          <td style="color: #10b981;">+{{ acc.total_income|format_inr }}</td>
+          <td style="color: #ef4444;">-{{ acc.total_expense|format_inr }}</td>
+          <td>{{ acc.avg_amount|format_inr }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // Account Volume Bar Chart
+  const accCtx = document.getElementById('accountsReportChart');
+  if (accCtx) {
+    const accLabels = {{ account_chart_labels|tojson }};
+    const accData = {{ account_chart_data|tojson }};
+
+    new Chart(accCtx, {
+      type: 'bar',
+      data: {
+        labels: accLabels,
+        datasets: [{
+          label: 'Total Transaction Volume (₹)',
+          data: accData,
+          backgroundColor: '#3b82f6',
+          borderRadius: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: { callback: (v) => '₹' + v.toLocaleString('en-IN') }
+          }
+        }
+      }
+    });
+  }
+
+  // Incident Status Donut Chart
+  const incCtx = document.getElementById('incidentReportChart');
+  if (incCtx) {
+    new Chart(incCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Open', 'Under Investigation', 'Resolved', 'False Positive'],
+        datasets: [{
+          data: [
+            {{ incident_status_counts.get('Open', 0) }},
+            {{ incident_status_counts.get('Under Investigation', 0) }},
+            {{ incident_status_counts.get('Resolved', 0) }},
+            {{ incident_status_counts.get('False Positive', 0) }}
+          ],
+          backgroundColor: ['#f59e0b', '#3b82f6', '#10b981', '#94a3b8'],
+          borderWidth: 2,
+          borderColor: '#ffffff'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { boxWidth: 12 } }
+        },
+        cutout: '65%'
+      }
+    });
+  }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+
+{% block title %}Transaction Management | Financial Risk Management{% endblock %}
+{% block page_heading %}Transaction Management{% endblock %}
+
+{% block content %}
+<!-- Top Transaction Stats -->
+<div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-bottom: 1.5rem;">
+  <div class="stat-card">
+    <div class="stat-icon indigo">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <rect x="2" y="5" width="20" height="14" rx="2"/>
+        <line x1="2" y1="10" x2="22" y2="10"/>
+      </svg>
+    </div>
+    <div class="stat-details">
+      <h3>Total Transactions</h3>
+      <div class="stat-value">{{ transactions|length }}</div>
+      <div class="stat-sub">Audited ledger entries</div>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon green">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <line x1="12" y1="1" x2="12" y2="23"/>
+        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+      </svg>
+    </div>
+    <div class="stat-details">
+      <h3>Total Flow Value</h3>
+      <div class="stat-value">
+        {{ (transactions|sum(attribute='amount'))|format_inr }}
+      </div>
+      <div class="stat-sub">Income + Expense sum</div>
+    </div>
+  </div>
+</div>
+
+<!-- Transactions Main Card -->
+<div class="content-card">
+  <div class="card-header-actions">
+    <div>
+      <h3>Financial Transactions (TABLE: Transactions)</h3>
+      <span style="font-size: 0.75rem; color: var(--text-muted);">Relational entries linked via Foreign Key (account_id &rarr; Accounts)</span>
+    </div>
+
+    <div class="header-controls">
+      <!-- Search Input -->
+      <div class="search-input-group">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" placeholder="Search description, account..." data-table-search="transactionsTable" id="transactionSearchInput">
+      </div>
+
+      <!-- Type Filter -->
+      <select class="filter-select" data-table-filter="transactionsTable" data-filter-col="2">
+        <option value="all">All Types</option>
+        <option value="Income">Income</option>
+        <option value="Expense">Expense</option>
+      </select>
+
+      <!-- Status Filter -->
+      <select class="filter-select" data-table-filter="transactionsTable" data-filter-col="6">
+        <option value="all">All Statuses</option>
+        <option value="Completed">Completed</option>
+        <option value="Pending">Pending</option>
+        <option value="Failed">Failed</option>
+      </select>
+
+      <button class="btn btn-primary" onclick="openModal('recordTransactionModal')" id="btnRecordTransaction">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <line x1="12" y1="5" x2="12" y2="19"/>
+          <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        <span>Record Transaction</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="data-table" id="transactionsTable">
+      <thead>
+        <tr>
+          <th>TX ID</th>
+          <th>Account Holder (FK)</th>
+          <th>Type</th>
+          <th>Amount</th>
+          <th>Date</th>
+          <th>Description</th>
+          <th>Status</th>
+          <th style="text-align: right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for tx in transactions %}
+        <tr>
+          <td><strong>#TX-{{ tx.transaction_id }}</strong></td>
+          <td>
+            <div style="font-weight: 600;">{{ tx.account_holder }}</div>
+            <span style="font-size: 0.72rem; color: var(--text-muted);">ACC #{{ tx.account_id }}</span>
+          </td>
+          <td>
+            <span class="badge {% if tx.transaction_type == 'Income' %}badge-type-income{% else %}badge-type-expense{% endif %}">
+              {{ tx.transaction_type }}
+            </span>
+          </td>
+          <td>
+            <strong style="color: {% if tx.transaction_type == 'Income' %}#10b981{% else %}#0f172a{% endif %};">
+              {% if tx.transaction_type == 'Income' %}+{% else %}-{% endif %}{{ tx.amount|format_inr }}
+            </strong>
+          </td>
+          <td style="color: var(--text-muted); font-size: 0.8rem; white-space: nowrap;">{{ tx.transaction_date }}</td>
+          <td>{{ tx.description }}</td>
+          <td>
+            <span class="badge badge-{{ tx.transaction_status|lower }}">{{ tx.transaction_status }}</span>
+          </td>
+          <td style="text-align: right; white-space: nowrap;">
+            <div style="display: inline-flex; gap: 0.4rem;">
+              <button class="btn btn-outline btn-sm" onclick="populateTransactionEdit('{{ tx.transaction_id }}', '{{ tx.account_id }}', '{{ tx.transaction_type }}', '{{ tx.amount }}', '{{ tx.transaction_status }}', '{{ tx.description|replace('\'', '\\\'') }}')">
+                Edit
+              </button>
+              <form action="{{ url_for('delete_transaction', transaction_id=tx.transaction_id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete Transaction #{{ tx.transaction_id }}?');">
+                <button type="submit" class="btn btn-danger-outline btn-sm">Delete</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal: Record Transaction -->
+<div class="modal-backdrop" id="recordTransactionModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3>Record Financial Transaction</h3>
+      <button class="modal-close-btn" onclick="closeModal('recordTransactionModal')">&times;</button>
+    </div>
+    <form action="{{ url_for('add_transaction') }}" method="POST">
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="account_id">Associated Account (Foreign Key) *</label>
+          <select name="account_id" id="account_id" class="form-control" required>
+            {% for acc in accounts %}
+              <option value="{{ acc.account_id }}">#ACC-{{ acc.account_id }} — {{ acc.account_holder }} (Bal: {{ acc.balance|format_inr }})</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="transaction_type">Transaction Type *</label>
+          <select name="transaction_type" id="transaction_type" class="form-control" required>
+            <option value="Income">Income (Deposit / Credit)</option>
+            <option value="Expense">Expense (Withdrawal / Debit)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="amount">Transaction Amount (₹) *</label>
+          <input type="number" step="0.01" min="0.01" name="amount" id="amount" class="form-control" placeholder="1500.00" required>
+          <div class="form-text">Amounts &gt; ₹5,000 will be flagged for rule-based risk evaluation.</div>
+        </div>
+
+        <div class="form-group">
+          <label for="transaction_status">Status *</label>
+          <select name="transaction_status" id="transaction_status" class="form-control" required>
+            <option value="Completed">Completed</option>
+            <option value="Pending">Pending</option>
+            <option value="Failed">Failed</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="description">Transaction Description *</label>
+          <input type="text" name="description" id="description" class="form-control" placeholder="e.g. International Wire Transfer to Vendor" required>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="closeModal('recordTransactionModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save & Evaluate Risk</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Edit Transaction -->
+<div class="modal-backdrop" id="editTransactionModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3>Edit Transaction Record</h3>
+      <button class="modal-close-btn" onclick="closeModal('editTransactionModal')">&times;</button>
+    </div>
+    <form action="{{ url_for('update_transaction') }}" method="POST">
+      <input type="hidden" name="transaction_id" id="edit_tx_id">
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="edit_tx_account_id">Associated Account ID *</label>
+          <select name="account_id" id="edit_tx_account_id" class="form-control" required>
+            {% for acc in accounts %}
+              <option value="{{ acc.account_id }}">#ACC-{{ acc.account_id }} — {{ acc.account_holder }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="edit_tx_type">Transaction Type *</label>
+          <select name="transaction_type" id="edit_tx_type" class="form-control" required>
+            <option value="Income">Income</option>
+            <option value="Expense">Expense</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="edit_tx_amount">Amount (₹) *</label>
+          <input type="number" step="0.01" min="0.01" name="amount" id="edit_tx_amount" class="form-control" required>
+        </div>
+
+        <div class="form-group">
+          <label for="edit_tx_status">Status *</label>
+          <select name="transaction_status" id="edit_tx_status" class="form-control" required>
+            <option value="Completed">Completed</option>
+            <option value="Pending">Pending</option>
+            <option value="Failed">Failed</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="edit_tx_description">Description *</label>
+          <input type="text" name="description" id="edit_tx_description" class="form-control" required>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="closeModal('editTransactionModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Update Transaction</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

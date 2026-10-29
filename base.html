@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Financial Risk Management System{% endblock %} | College PBL</title>
+  <meta name="description" content="College Problem-Based Learning (PBL) project for DBMS and DSA demonstrating financial risk management, rule-based assessment, and algorithmic optimization.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <!-- Chart.js CDN for responsive financial charts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+  <!-- Flash Messages Data Transfer for Toasts -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="flash-message-data" data-category="{{ category }}" data-message="{{ message }}" style="display:none;"></div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <!-- Sidebar Navigation -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="brand-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          <path d="M9 12l2 2 4-4"/>
+        </svg>
+      </div>
+      <div class="brand-info">
+        <h2>RiskGuard</h2>
+        <span>DBMS & DSA PBL Project</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-label">Core Operations</div>
+      
+      <a href="{{ url_for('index') }}" class="nav-item {% if active_page == 'dashboard' %}active{% endif %}" id="nav-dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <rect x="3" y="3" width="7" height="7" rx="1"/>
+          <rect x="14" y="3" width="7" height="7" rx="1"/>
+          <rect x="14" y="14" width="7" height="7" rx="1"/>
+          <rect x="3" y="14" width="7" height="7" rx="1"/>
+        </svg>
+        <span>Dashboard</span>
+      </a>
+
+      <a href="{{ url_for('accounts_page') }}" class="nav-item {% if active_page == 'accounts' %}active{% endif %}" id="nav-accounts">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+          <circle cx="12" cy="7" r="4"/>
+        </svg>
+        <span>Accounts</span>
+      </a>
+
+      <a href="{{ url_for('transactions_page') }}" class="nav-item {% if active_page == 'transactions' %}active{% endif %}" id="nav-transactions">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path d="M7 16V4m0 0L3 8m4-4l4 4m6 4v12m0 0l4-4m-4 4l-4-4"/>
+        </svg>
+        <span>Transactions</span>
+      </a>
+
+      <div class="nav-label">Risk & Compliance</div>
+
+      <a href="{{ url_for('risk_assessment_page') }}" class="nav-item {% if active_page == 'risk_assessment' %}active{% endif %}" id="nav-risk">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+          <polyline points="2 17 12 22 22 17"/>
+          <polyline points="2 12 12 17 22 12"/>
+        </svg>
+        <span>Risk Assessment</span>
+      </a>
+
+      <a href="{{ url_for('fraud_detection_page') }}" class="nav-item {% if active_page == 'fraud_detection' %}active{% endif %}" id="nav-fraud">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+        <span>Fraud Incidents</span>
+      </a>
+
+      <div class="nav-label">Analytics & DSA</div>
+
+      <a href="{{ url_for('reports_page') }}" class="nav-item {% if active_page == 'reports' %}active{% endif %}" id="nav-reports">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <line x1="18" y1="20" x2="18" y2="10"/>
+          <line x1="12" y1="20" x2="12" y2="4"/>
+          <line x1="6" y1="20" x2="6" y2="14"/>
+        </svg>
+        <span>Reports & Analytics</span>
+      </a>
+
+      <a href="{{ url_for('algorithms_page') }}" class="nav-item {% if active_page == 'algorithms' %}active{% endif %}" id="nav-algorithms">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path d="M16 18l6-6-6-6"/>
+          <path d="M8 6l-6 6 6 6"/>
+        </svg>
+        <span>DSA Algorithms</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div>Database: <strong>financial_risk_db</strong></div>
+      <div class="status-badge-live">
+        <span class="pulse-dot"></span>
+        <span>MySQL Connected (Stage 1)</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Application Wrapper -->
+  <div class="main-wrapper">
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="menu-toggle-btn" id="menuToggleBtn" title="Toggle Navigation">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="12" x2="21" y2="12"/>
+            <line x1="3" y1="6" x2="21" y2="6"/>
+            <line x1="3" y1="18" x2="21" y2="18"/>
+          </svg>
+        </button>
+        <h1 class="page-title">{% block page_heading %}Financial Risk Management System{% endblock %}</h1>
+      </div>
+
+      <div class="topbar-right">
+        <span class="badge-tag">Academic College PBL</span>
+        <span style="font-size: 0.8rem; color: var(--text-muted);">DBMS & DSA</span>
+      </div>
+    </header>
+
+    <!-- Content Area -->
+    <main class="content-container">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>
