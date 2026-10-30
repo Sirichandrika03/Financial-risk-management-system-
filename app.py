@@ -573,11 +573,6 @@ def run_algorithm_api():
 
 if __name__ == '__main__':
     import os
-    port = int(os.environ.get("PORT", 10000))
+    port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=False)
-    print("=" * 65)
-    print(" FINANCIAL RISK MANAGEMENT SYSTEM - College PBL (DBMS + DSA)")
-    print(" Flask Development Server Starting...")
-    print(" Access Dashboard at: http://127.0.0.1:5000")
-    print("=" * 65)
-    app.run(debug=True, port=5000)
+   
